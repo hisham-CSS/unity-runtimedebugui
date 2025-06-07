@@ -431,9 +431,9 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ## 📞 Support
 
-- **Issues:** [GitHub Issues](https://github.com/yourusername/unity-debugui/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/yourusername/unity-debugui/discussions)
-- **Discord:** [Your Discord Server](https://discord.gg/yourserver)
+- **Issues:** [GitHub Issues](https://github.com/hisham-css/unity-debugui/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/hisham-css/unity-debugui/discussions)
+- **Discord:** [Cat Splat Studios Discord](https://discord.gg/MXcPNkBWxf)
 
 ---
 
