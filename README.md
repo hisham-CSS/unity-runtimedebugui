@@ -66,9 +66,9 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
 1. **Create your debug UI class:**
    ```csharp
    using UnityEngine;
-   using DebugUI; // Add this namespace
+   using RuntimeDebugUI; // Add this namespace
 
-   public class MyGameDebugUI : DebugUI.DebugUI
+   public class MyGameDebugUI : DebugUI
    {
        [Header("Game References")]
        [SerializeField] private PlayerController player;
@@ -249,9 +249,9 @@ Here's a complete example from a platformer game:
 
 ```csharp
 using UnityEngine;
-using DebugUI;
+using RuntimeDebugUI;
 
-public class PlayerDebugUI : DebugUI.DebugUI
+public class PlayerDebugUI : DebugUI
 {
     [Header("Player References")]
     [SerializeField] private PlayerController player;
@@ -433,7 +433,7 @@ public enum CustomControlType
 - Verify `ConfigureTabs()` is calling `AddTab()` for each tab
 - Check that getter/setter functions are not null
 - Ensure control names are unique within each tab
-- Add the `using DebugUI;` namespace to your script
+- Add the `using RuntimeDebugUI;` namespace to your script
 
 **"Settings not saving"**
 - Verify `enableSerialization = true`
