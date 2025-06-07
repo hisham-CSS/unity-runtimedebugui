@@ -269,8 +269,6 @@ public class PlayerDebugUI : DebugUI
     protected override void ConfigureTabs()
     {
         AddTab(ConfigureMovementTab());
-        AddTab(ConfigureJumpTab());
-        AddTab(ConfigureCameraTab());
         AddTab(ConfigureDebugInfoTab());
     }
 
