@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="UnityEngine.UIElements" 
+      xmlns:editor="UnityEditor.UIElements" xsi:schemaLocation="UnityEngine.UIElements ../UIElementsSchema/UnityEngine.UIElements.xsd">
+    
+    <Style src="DebugUI.uss" />
+    
+    <VisualElement name="DebugPanel" class="debug-panel">
+        <VisualElement name="Header" class="header">
+            <Label text="Debug Settings" class="header-text" />
+            <Button name="CloseButton" text="×" class="close-button" />
+        </VisualElement>
+        
+        <!-- Dynamic tab buttons container -->
+        <ScrollView name="TabButtonsScrollView" class="tab-buttons-scroll">
+            <VisualElement name="TabButtons" class="tab-buttons">
+                <!-- Tab buttons will be generated dynamically -->
+            </VisualElement>
+        </ScrollView>
+        
+        <!-- Dynamic tab content container -->
+        <VisualElement name="TabContentContainer" class="tab-content-container">
+            <!-- Tab content will be generated dynamically -->
+        </VisualElement>
+        
+        <VisualElement name="Footer" class="footer">
+            <Button name="ResetButton" text="Reset to Default" class="footer-button" />
+            <Label text="Press F1 to toggle debug panel" class="footer-text" />
+        </VisualElement>
+    </VisualElement>
+    
+</UXML>
+

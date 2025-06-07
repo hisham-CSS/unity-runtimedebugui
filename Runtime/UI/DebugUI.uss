@@ -1,0 +1,400 @@
+.debug-panel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 35%;
+    min-width: 300px;
+    max-width: 450px;
+    max-height: 90%;
+    background-color: rgba(0, 0, 0, 0.85);
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+    padding: 5px;
+    color: rgb(220, 220, 220);
+    overflow: hidden;
+    flex-direction: column;
+}
+
+.header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+}
+
+.header-text {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.close-button {
+    width: 24px;
+    height: 24px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    background-color: rgba(255, 0, 0, 0.5);
+    border-radius: 12px;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.close-button:hover {
+    background-color: rgba(255, 0, 0, 0.7);
+}
+
+/* Tab buttons scrolling container */
+.tab-buttons-scroll {
+    flex-shrink: 0;
+    max-height: 80px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.tab-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    padding: 5px;
+}
+
+.tab-button {
+    flex-grow: 0;
+    flex-basis: auto;
+    min-width: 60px;
+    margin: 2px;
+    padding: 5px;
+    background-color: rgba(60, 60, 60, 0.5);
+    border-radius: 3px;
+    font-size: 12px;
+    border-width: 1px;
+    border-color: rgba(100, 100, 100, 0.3);
+}
+
+.tab-button:hover {
+    background-color: rgba(80, 80, 80, 0.5);
+}
+
+.tab-button:active {
+    background-color: rgba(100, 100, 100, 0.5);
+}
+
+.tab-button-active {
+    background-color: rgba(0, 180, 255, 0.5);
+    border-color: rgba(0, 220, 255, 0.8);
+}
+
+.tab-button-active:hover {
+    background-color: rgba(0, 200, 255, 0.6);
+}
+
+/* Tab content container with scrolling */
+.tab-content-container {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.tab-content {
+    display: none;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.tab-content-scroll {
+    flex-grow: 1;
+    padding: 10px;
+}
+
+.tab-content-visible {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Section styling */
+.section-header {
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-bottom: 10px;
+    color: rgb(255, 255, 255);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+    padding-bottom: 5px;
+    flex-shrink: 0;
+}
+
+.subsection-header {
+    font-size: 12px;
+    -unity-font-style: bold;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    color: rgb(200, 200, 200);
+    flex-shrink: 0;
+}
+
+/* Control containers */
+.control-container {
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.control-container Label {
+    font-size: 13px;
+    color: rgb(220, 220, 220);
+    margin-bottom: 2px;
+    -unity-font-style: normal;
+}
+
+/* Slider styling */
+.slider-container {
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.slider-with-value {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.slider {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 120px;
+    margin-right: 5px;
+}
+
+.slider .unity-base-slider__tracker {
+    background-color: rgba(40, 40, 40, 0.8);
+    border-color: rgba(100, 100, 100, 0.8);
+    border-width: 1px;
+    border-radius: 2px;
+    height: 6px;
+}
+
+.slider .unity-base-slider__dragger {
+    width: 16px;
+    height: 16px;
+    background-color: rgb(0, 180, 255);
+    border-color: rgb(0, 220, 255);
+    border-width: 1px;
+    border-radius: 8px;
+    margin-top: -8px;
+}
+
+.value-field {
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+    background-color: rgba(30, 30, 30, 0.9);
+    border-color: rgba(100, 100, 100, 0.8);
+    border-width: 1px;
+    border-radius: 3px;
+}
+
+.value-field .unity-base-text-field__input {
+    background-color: rgba(30, 30, 30, 0);
+    color: rgb(0, 220, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    padding: 2px;
+    font-size: 10px;
+}
+
+/* Toggle styling */
+.toggle-container {
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.toggle-container .unity-toggle {
+    flex-direction: row;
+    align-items: center;
+}
+
+.toggle-container .unity-toggle__checkmark {
+    width: 16px;
+    height: 16px;
+    background-color: rgba(40, 40, 40, 0.8);
+    border-color: rgba(100, 100, 100, 0.8);
+    border-width: 1px;
+    border-radius: 2px;
+    margin-right: 5px;
+}
+
+.toggle-container .unity-toggle:checked .unity-toggle__checkmark {
+    background-color: rgb(0, 180, 255);
+    border-color: rgb(0, 220, 255);
+}
+
+/* Info display styling */
+.info-container {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    padding: 3px;
+    background-color: rgba(40, 40, 40, 0.5);
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.info-label {
+    -unity-font-style: bold;
+    color: rgb(180, 180, 180);
+    flex-shrink: 0;
+    width: 40%;
+    font-size: 12px;
+}
+
+.info-value {
+    color: rgb(120, 200, 120);
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 60%;
+    -unity-text-align: upper-right;
+    font-size: 12px;
+}
+
+/* Footer styling */
+.footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.2);
+    margin-top: 10px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.footer-button {
+    background-color: rgba(60, 100, 150, 0.5);
+    border-radius: 3px;
+    padding: 5px 10px;
+    margin: 2px;
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+.footer-button:hover {
+    background-color: rgba(80, 120, 170, 0.5);
+}
+
+.footer-text {
+    font-size: 10px;
+    color: rgb(150, 150, 150);
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: upper-right;
+    margin: 2px;
+}
+
+.note-text {
+    font-size: 10px;
+    color: rgb(150, 150, 150);
+    -unity-font-style: italic;
+    margin-top: 5px;
+    flex-shrink: 0;
+}
+
+/* Custom Tooltip System Styles */
+.tooltip-container {
+    position: absolute;
+    background-color: rgba(20, 20, 20, 0.95);
+    border-width: 1px;
+    border-color: rgba(150, 150, 150, 0.8);
+    border-radius: 4px;
+    padding: 6px 8px;
+    max-width: 250px;
+    display: none;
+}
+
+.tooltip-label {
+    color: rgba(240, 240, 240, 1);
+    font-size: 11px;
+    white-space: normal;
+    text-overflow: clip;
+    overflow: visible;
+    -unity-text-align: upper-left;
+}
+
+/* Media query for very small screens */
+@media screen and (max-width: 600px) {
+    .debug-panel {
+        width: 90%;
+        min-width: 250px;
+        right: 5px;
+        top: 5px;
+    }
+    
+    .control-container Label {
+        font-size: 14px;
+        -unity-font-style: bold;
+        color: rgb(255, 255, 255);
+        margin-bottom: 3px;
+    }
+    
+    .slider-with-value {
+        flex-direction: row;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .slider {
+        margin-right: 8px;
+    }
+    
+    .value-field {
+        width: 60px;
+        min-width: 60px;
+        height: 22px;
+    }
+    
+    .value-field .unity-base-text-field__input {
+        font-size: 13px;
+        padding: 3px;
+    }
+    
+    .tab-button {
+        min-width: 55px;
+        font-size: 12px;
+        padding: 5px;
+    }
+    
+    .header-text {
+        font-size: 16px;
+    }
+    
+    .section-header {
+        font-size: 15px;
+    }
+    
+    .footer-button {
+        font-size: 13px;
+        padding: 6px 12px;
+    }
+    
+    .footer-text {
+        font-size: 11px;
+    }
+    
+    /* Adjust tooltip for small screens */
+    .tooltip-container {
+        max-width: 200px;
+        padding: 4px 6px;
+    }
+    
+    .tooltip-label {
+        font-size: 10px;
+    }
+}
