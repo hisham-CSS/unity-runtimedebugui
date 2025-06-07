@@ -17,14 +17,30 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
 - 🔧 **Easy inheritance pattern** for project-specific implementations
 - 📊 **Clean JSON serialization** with configurable decimal precision
 
-## 🚀 Quick Start
+## 🚀 Installation
 
-### Prerequisites
+### Method 1: Package Manager (Git URL) - **Recommended**
 
-- Unity 2022.3 or later
-- Newtonsoft JSON package (`com.unity.nuget.newtonsoft-json`)
+1. **Install RuntimeDebugUI via Git URL:**
+   ```
+   Window → Package Manager → Add package from git URL
+   https://github.com/hisham-CSS/unity-runtimedebugui.git
+   ```
 
-### Installation
+2. **That's it!** The package will be installed automatically with all dependencies.
+
+### Method 2: Unity Package Manager (Local)
+
+1. **Download the repository:**
+   - Download ZIP from GitHub or clone: `git clone https://github.com/hisham-CSS/unity-runtimedebugui.git`
+
+2. **Install via Package Manager:**
+   ```
+   Window → Package Manager → Add package from disk
+   Select the package.json file from the downloaded folder
+   ```
+
+### Method 3: Manual Installation
 
 1. **Add Newtonsoft JSON package:**
    ```
@@ -32,15 +48,27 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
    com.unity.nuget.newtonsoft-json
    ```
 
-2. **Import the DebugUI system:**
-   - Copy `DebugUI.cs`, `DebugUI.uxml`, and `DebugUI.uss` to your project
-   - Place them in a `Scripts/DebugUI/` folder (recommended)
+2. **Download and copy files:**
+   - Download the repository from GitHub
+   - Copy the `Runtime` folder contents to your project:
+     - `DebugUI.cs` → `Assets/Scripts/DebugUI/`
+     - `UI/DebugUI.uxml` → `Assets/Scripts/DebugUI/UI/`
+     - `UI/DebugUI.uss` → `Assets/Scripts/DebugUI/UI/`
 
-3. **Create your debug UI class:**
+3. **Create Assembly Definition (Optional but recommended):**
+   - Create `DebugUI.Runtime.asmdef` in your DebugUI folder
+   - Add reference to `Unity.Nuget.Newtonsoft-Json`
+
+## 🎮 Quick Start
+
+### Basic Setup
+
+1. **Create your debug UI class:**
    ```csharp
    using UnityEngine;
+   using DebugUI; // Add this namespace
 
-   public class MyGameDebugUI : DebugUI
+   public class MyGameDebugUI : DebugUI.DebugUI
    {
        [Header("Game References")]
        [SerializeField] private PlayerController player;
@@ -62,7 +90,7 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
            tab.controls.Add(new DebugControlConfig
            {
                name = "MoveSpeed",
-               displayName = "Move Speed",
+               displayName = "Move Speed *", // * indicates auto-saved
                tooltip = "Player movement speed",
                type = DebugControlConfig.ControlType.Slider,
                saveValue = true, // Auto-save this value
@@ -77,11 +105,16 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
    }
    ```
 
-4. **Setup in scene:**
+2. **Setup in scene:**
    - Create a GameObject with a `UIDocument` component
    - Assign `DebugUI.uxml` to the UIDocument's Source Asset
    - Add your debug UI script to the same GameObject
    - Assign the UIDocument reference in the inspector
+
+3. **Test it:**
+   - Press `F1` (default toggle key) to show/hide the debug panel
+   - Adjust values in real-time
+   - Values marked with `*` are automatically saved
 
 ## 📖 Detailed Usage
 
@@ -92,7 +125,7 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
 new DebugControlConfig
 {
     name = "JumpHeight",
-    displayName = "Jump Height",
+    displayName = "Jump Height *",
     tooltip = "How high the player can jump",
     type = DebugControlConfig.ControlType.Slider,
     saveValue = true,
@@ -108,7 +141,7 @@ new DebugControlConfig
 new DebugControlConfig
 {
     name = "GodMode",
-    displayName = "God Mode",
+    displayName = "God Mode *",
     tooltip = "Player takes no damage",
     type = DebugControlConfig.ControlType.Toggle,
     saveValue = true,
@@ -138,23 +171,26 @@ Group related controls using the `sectionName` property:
 new DebugControlConfig
 {
     name = "MoveSpeed",
-    displayName = "Move Speed",
+    displayName = "Move Speed *",
     sectionName = "Basic Movement", // Groups controls under this header
+    saveValue = true,
     // ... other properties
 },
 new DebugControlConfig
 {
     name = "JumpHeight", 
-    displayName = "Jump Height",
+    displayName = "Jump Height *",
     sectionName = "Basic Movement", // Same section
+    saveValue = true,
     // ... other properties
 },
 // Advanced section
 new DebugControlConfig
 {
     name = "WallJumpForce",
-    displayName = "Wall Jump Force", 
+    displayName = "Wall Jump Force *", 
     sectionName = "Advanced Movement", // New section
+    saveValue = true,
     // ... other properties
 }
 ```
@@ -213,8 +249,9 @@ Here's a complete example from a platformer game:
 
 ```csharp
 using UnityEngine;
+using DebugUI;
 
-public class PlayerDebugUI : DebugUI
+public class PlayerDebugUI : DebugUI.DebugUI
 {
     [Header("Player References")]
     [SerializeField] private PlayerController player;
@@ -250,7 +287,7 @@ public class PlayerDebugUI : DebugUI
             new DebugControlConfig
             {
                 name = "MoveSpeed",
-                displayName = "Move Speed",
+                displayName = "Move Speed *",
                 tooltip = "Base movement speed of the player",
                 sectionName = "Basic Movement",
                 type = DebugControlConfig.ControlType.Slider,
@@ -263,7 +300,7 @@ public class PlayerDebugUI : DebugUI
             new DebugControlConfig
             {
                 name = "Acceleration",
-                displayName = "Acceleration",
+                displayName = "Acceleration *",
                 tooltip = "How quickly the player reaches max speed",
                 sectionName = "Basic Movement",
                 type = DebugControlConfig.ControlType.Slider,
@@ -318,7 +355,7 @@ public class PlayerDebugUI : DebugUI
 | Property | Type | Description |
 |----------|------|-------------|
 | `name` | string | Unique identifier for the control |
-| `displayName` | string | Text shown in the UI |
+| `displayName` | string | Text shown in the UI (add * for saved controls) |
 | `tooltip` | string | Tooltip text (optional) |
 | `type` | ControlType | Slider, Toggle, or InfoDisplay |
 | `sectionName` | string | Groups controls under section headers |
@@ -335,7 +372,7 @@ public class PlayerDebugUI : DebugUI
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `toggleKey` | KeyCode | Key to show/hide the debug panel |
+| `toggleKey` | KeyCode | Key to show/hide the debug panel (default: F1) |
 | `showOnStart` | bool | Whether to show panel on startup |
 | `panelTitle` | string | Title displayed in the header |
 
@@ -380,8 +417,13 @@ public enum CustomControlType
 
 ### Common Issues
 
+**"Package not found" when using Git URL**
+- Ensure you have Git installed and accessible from Unity
+- Try using HTTPS instead of SSH: `https://github.com/hisham-CSS/unity-runtimedebugui.git`
+- Check your internet connection and firewall settings
+
 **"Newtonsoft.Json not found"**
-- Install the Newtonsoft JSON package via Package Manager
+- Install the Newtonsoft JSON package via Package Manager: `com.unity.nuget.newtonsoft-json`
 
 **"UIDocument reference is null"**
 - Ensure UIDocument component has `DebugUI.uxml` assigned
@@ -391,6 +433,7 @@ public enum CustomControlType
 - Verify `ConfigureTabs()` is calling `AddTab()` for each tab
 - Check that getter/setter functions are not null
 - Ensure control names are unique within each tab
+- Add the `using DebugUI;` namespace to your script
 
 **"Settings not saving"**
 - Verify `enableSerialization = true`
@@ -408,20 +451,32 @@ public enum CustomControlType
 - Large numbers of controls may impact performance - consider splitting into multiple tabs
 - Auto-save triggers on every value change - avoid rapid updates if possible
 
+## 🔄 Updating the Package
+
+### Via Package Manager (Git URL)
+1. Go to `Window → Package Manager`
+2. Select "In Project" and find "Runtime Debug UI"
+3. Click "Update" if available, or remove and re-add the Git URL
+
+### Manual Update
+1. Delete the old files from your project
+2. Follow the installation steps again with the new version
+
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
 ### Development Setup
-
 1. Clone the repository
 2. Open in Unity 2022.3+
 3. Install Newtonsoft JSON package
-4. Open the example scene to test changes
+4. Make your changes
+5. Test thoroughly
+6. Submit a PR
 
 ## 🙏 Acknowledgments
 
