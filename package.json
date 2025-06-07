@@ -1,9 +1,9 @@
 {
-  "name": "com.CatSplatStudios.RuntimeDebugUI",
+  "name": "com.catsplatstudios.runtimedebugui",
   "version": "1.0.0",
-  "displayName": "DebugUI System",
-  "description": "A powerful, data-driven debug UI system for Unity with real-time parameter tweaking and persistent settings.",
-  "unity": "6000.0",
+  "displayName": "Runtime Debug UI",
+  "description": "A powerful, data-driven debug UI system for Unity with real-time parameter tweaking and persistent settings",
+  "unity": "2022.3",
   "keywords": [
     "debug",
     "ui",
