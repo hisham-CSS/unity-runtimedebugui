@@ -76,7 +76,6 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
        protected override void ConfigureTabs()
        {
            AddTab(ConfigurePlayerTab());
-           AddTab(ConfigureGameplayTab());
        }
        
        private DebugTabConfig ConfigurePlayerTab()
@@ -263,6 +262,7 @@ public class PlayerDebugUI : DebugUI
         if (player == null)
             player = FindObjectOfType<PlayerController>();
         
+		// Call base class in order to setup the functionality for the window
         base.Start();
     }
 
