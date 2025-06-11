@@ -10,12 +10,13 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
 
 - 🎛️ **Real-time parameter tweaking** with sliders, toggles, and info displays
 - 💾 **Smart auto-save system** with accessible file locations
-- 📱 **Cross-platform compatibility** (Windows, macOS, Linux, mobile)
+- 📱 **Full mobile support** with multiple trigger options
 - 🖱️ **Runtime tooltip system** that works in builds
 - 📂 **Organized tab system** with automatic scrolling
 - 🎯 **Data-driven configuration** - no hardcoded UI elements
 - 🔧 **Easy inheritance pattern** for project-specific implementations
 - 📊 **Clean JSON serialization** with configurable decimal precision
+- 🌍 **Cross-platform compatibility** (Windows, macOS, Linux, mobile, WebGL)
 
 ## 🚀 Installation
 
@@ -111,9 +112,70 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
    - Assign the UIDocument reference in the inspector
 
 3. **Test it:**
-   - Press `F1` (default toggle key) to show/hide the debug panel
+   - **Desktop:** Press `F1` (default toggle key) to show/hide the debug panel
+   - **Mobile:** Use touch gestures or on-screen button (see Mobile Support section)
    - Adjust values in real-time
    - Values marked with `*` are automatically saved
+
+## 📱 Mobile Support
+
+The system includes comprehensive mobile support with multiple trigger options:
+
+### Mobile Trigger Types
+
+#### 1. **Multi-Touch Gesture** (Default)
+- **How it works:** Tap with 3 fingers simultaneously to toggle the debug panel
+- **Best for:** Quick access during gameplay without UI clutter
+- **Configuration:**
+  ```csharp
+  [Header("Mobile Support")]
+  [SerializeField] private MobileTriggerType mobileTriggerType = MobileTriggerType.TouchGesture;
+  [SerializeField] private int touchCount = 3; // Number of fingers required
+  ```
+
+#### 2. **Touch and Hold**
+- **How it works:** Touch and hold anywhere on screen for 2 seconds
+- **Best for:** Deliberate access to prevent accidental triggers
+- **Configuration:**
+  ```csharp
+  [SerializeField] private MobileTriggerType mobileTriggerType = MobileTriggerType.TouchAndHold;
+  [SerializeField] private float touchHoldTime = 2f; // Hold duration in seconds
+  ```
+
+#### 3. **On-Screen Toggle Button**
+- **How it works:** Always-visible button in the top-right corner
+- **Best for:** Maximum accessibility and discoverability
+- **Configuration:**
+  ```csharp
+  [SerializeField] private MobileTriggerType mobileTriggerType = MobileTriggerType.OnScreenButton;
+  [SerializeField] private string toggleButtonText = "Debug"; // Button text
+  ```
+
+### Mobile Configuration
+
+```csharp
+[Header("Mobile Support")]
+[SerializeField] private bool enableMobileSupport = true;
+[SerializeField] private MobileTriggerType mobileTriggerType = MobileTriggerType.TouchGesture;
+[SerializeField] private int touchCount = 3; // For multi-touch trigger
+[SerializeField] private float touchHoldTime = 2f; // For touch and hold trigger
+[SerializeField] private bool showToggleButton = true; // Show on-screen button
+[SerializeField] private string toggleButtonText = "Debug";
+
+public enum MobileTriggerType
+{
+    TouchGesture,    // Multi-touch (e.g., 3 finger tap)
+    TouchAndHold,    // Touch and hold for X seconds
+    OnScreenButton   // Always visible toggle button
+}
+```
+
+### Platform Support
+
+- ✅ **iOS** - All trigger types supported
+- ✅ **Android** - All trigger types supported  
+- ✅ **WebGL Mobile** - Touch events work in mobile browsers
+- ✅ **Desktop** - Keyboard shortcuts + mobile triggers available
 
 ## 📖 Detailed Usage
 
@@ -374,6 +436,17 @@ public class PlayerDebugUI : DebugUI
 | `showOnStart` | bool | Whether to show panel on startup |
 | `panelTitle` | string | Title displayed in the header |
 
+### Mobile Support Configuration
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `enableMobileSupport` | bool | Enable mobile touch input handling |
+| `mobileTriggerType` | MobileTriggerType | TouchGesture, TouchAndHold, or OnScreenButton |
+| `touchCount` | int | Number of fingers for multi-touch gesture |
+| `touchHoldTime` | float | Hold duration for touch-and-hold trigger |
+| `showToggleButton` | bool | Show on-screen toggle button |
+| `toggleButtonText` | string | Text displayed on the toggle button |
+
 ### Serialization Configuration
 
 | Property | Type | Description |
@@ -393,7 +466,7 @@ The UI uses Unity's UI Toolkit (USS). Modify `DebugUI.uss` to customize:
 - Colors and transparency
 - Fonts and sizes  
 - Layout and spacing
-- Responsive breakpoints
+- Mobile-responsive breakpoints
 
 ### Extending Functionality
 
@@ -438,6 +511,12 @@ public enum CustomControlType
 - Check that controls have `saveValue = true`
 - Ensure write permissions for the save location
 
+**"Mobile triggers not working"**
+- Verify `enableMobileSupport = true`
+- Check that you're testing on an actual mobile device or mobile simulator
+- For touch-and-hold, ensure you're holding still (movement cancels the gesture)
+- For multi-touch, ensure all fingers touch simultaneously
+
 **"Tooltips not showing"**
 - Tooltips require mouse hover - they don't work with touch input
 - Check that `tooltip` property is set on controls
@@ -448,6 +527,7 @@ public enum CustomControlType
 - Info displays update every frame - keep string operations lightweight
 - Large numbers of controls may impact performance - consider splitting into multiple tabs
 - Auto-save triggers on every value change - avoid rapid updates if possible
+- Mobile input checking runs every frame when enabled - disable if not needed
 
 ## 🔄 Updating the Package
 
@@ -470,17 +550,17 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ### Development Setup
 1. Clone the repository
-2. Open in Unity 2022.3+
-3. Install Newtonsoft JSON package
-4. Make your changes
+2. Follow the manual installation steps.
+4. Make your changes in the new project.
 5. Test thoroughly
-6. Submit a PR
+6. Copy your changes back to the cloned repository.
+7. Submit a PR
 
 ## 🙏 Acknowledgments
 
 - Built for the Unity community
 - Inspired by developer tools and debug interfaces
-- Thanks to all contributors and testers
+- Thanks to all who wish to contribute or test this package
 
 ## 📞 Support
 
