@@ -9,7 +9,7 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
 ## ✨ Features
 
 - 🎛️ **Real-time parameter tweaking** with sliders, toggles, and info displays
-- 💾 **Smart auto-save system** with accessible file locations
+- 💾 **Intelligent auto-save system** with performance optimization and visual feedback
 - 📱 **Full mobile support** with multiple trigger options
 - 🖱️ **Runtime tooltip system** that works in builds
 - 📂 **Organized tab system** with automatic scrolling
@@ -17,6 +17,8 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
 - 🔧 **Easy inheritance pattern** for project-specific implementations
 - 📊 **Clean JSON serialization** with configurable decimal precision
 - 🌍 **Cross-platform compatibility** (Windows, macOS, Linux, mobile, WebGL)
+- ⚡ **Performance optimized** with debounced saving and minimal disk I/O
+- 🎨 **Professional UI** with custom editor and visual status indicators
 
 ## 🚀 Installation
 
@@ -51,14 +53,15 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
 
 2. **Download and copy files:**
    - Download the repository from GitHub
-   - Copy the `Runtime` folder contents to your project:
-     - `DebugUI.cs` → `Assets/Scripts/DebugUI/`
-     - `UI/DebugUI.uxml` → `Assets/Scripts/DebugUI/UI/`
-     - `UI/DebugUI.uss` → `Assets/Scripts/DebugUI/UI/`
+   - Copy the `Runtime` and `Editor` folder contents to your project:
+     - `Runtime/DebugUI.cs` → `Assets/Scripts/DebugUI/`
+     - `Runtime/UI/DebugUI.uxml` → `Assets/Scripts/DebugUI/UI/`
+     - `Runtime/UI/DebugUI.uss` → `Assets/Scripts/DebugUI/UI/`
+	 - `Editor/DebugUIEditor.cs` → `Assets/Scripts/DebugUI/Editor`
+     - `Runtime/UI/DebugUIPropertyDrawer.cs` → `Assets/Scripts/DebugUI/Editor`
 
-3. **Create Assembly Definition (Optional but recommended):**
-   - Create `DebugUI.Runtime.asmdef` in your DebugUI folder
-   - Add reference to `Unity.Nuget.Newtonsoft-Json`
+3. **Copy Assembly Definition (Optional but recommended):**
+   - Copy the `CatSplatStudios.DebugUI.asmdef` and `CatSplatStudios.DebugUI.Editor.asmdef` in your DebugUI and Editor folders respectively.
 
 ## 🎮 Quick Start
 
@@ -117,6 +120,59 @@ A powerful, data-driven debug UI system for Unity that enables real-time paramet
    - Adjust values in real-time
    - Values marked with `*` are automatically saved
 
+## ⚡ Auto-Save System
+
+The system features an intelligent auto-save system with multiple modes for optimal performance:
+
+### Auto-Save Modes
+
+#### 1. **Debounced** (Default - Recommended)
+- **How it works:** Saves 2 seconds after you stop changing values
+- **Performance:** 99% reduction in disk writes during active use
+- **Best for:** Most projects - balances safety with performance
+- **Visual feedback:** Orange save button when changes are pending
+
+#### 2. **Interval**
+- **How it works:** Saves every 30 seconds if there are unsaved changes
+- **Performance:** Predictable save timing with minimal writes
+- **Best for:** Long debugging sessions with frequent changes
+
+#### 3. **Manual**
+- **How it works:** Only saves when you click the save button or on app events
+- **Performance:** Zero automatic disk writes
+- **Best for:** Maximum control and performance-critical scenarios
+
+#### 4. **Immediate** (Legacy)
+- **How it works:** Saves immediately on every change (original behavior)
+- **Performance:** Poor - not recommended for production
+- **Best for:** Backward compatibility only
+
+### Visual Feedback
+
+The system provides clear visual indicators for save status:
+
+- **Save Button States:**
+  - Normal: "Save Settings" (default styling)
+  - Pending: "Save Settings *" (orange background)
+  - Saving: "Saved!" (green background, temporarily disabled)
+
+- **Status Indicator:** (bottom-right corner)
+  - "Unsaved Changes" (orange) - when modifications are pending
+  - "Saving..." (yellow) - during save operations
+  - "Saved" (green) - confirmation that auto-hides after 2 seconds
+
+### Configuration
+
+```csharp
+[Header("Auto-Save Configuration")]
+[SerializeField] private AutoSaveMode autoSaveMode = AutoSaveMode.Debounced;
+[SerializeField] private float autoSaveDelay = 2f; // Debounced delay
+[SerializeField] private float autoSaveInterval = 30f; // Interval timing
+[SerializeField] private bool saveOnApplicationPause = true; // Mobile pause
+[SerializeField] private bool saveOnApplicationFocus = true; // Window focus loss
+[SerializeField] private bool saveOnDestroy = true; // Component destruction
+```
+
 ## 📱 Mobile Support
 
 The system includes comprehensive mobile support with multiple trigger options:
@@ -150,7 +206,7 @@ The system includes comprehensive mobile support with multiple trigger options:
   [SerializeField] private MobileTriggerType mobileTriggerType = MobileTriggerType.OnScreenButton;
   [SerializeField] private string toggleButtonText = "Debug"; // Button text
   ```
-
+  
 ### Mobile Configuration
 
 ```csharp
@@ -176,6 +232,28 @@ public enum MobileTriggerType
 - ✅ **Android** - All trigger types supported  
 - ✅ **WebGL Mobile** - Touch events work in mobile browsers
 - ✅ **Desktop** - Keyboard shortcuts + mobile triggers available
+
+## 🎨 Custom Editor
+
+The package includes a professional custom editor that provides:
+
+### Enhanced Inspector Experience
+
+- **Conditional Field Display:** Mobile and serialization options only appear when enabled
+- **Organized Sections:** Collapsible foldout groups for better navigation
+- **Real-time Help:** Contextual guidance that updates based on your settings
+- **Smart Validation:** Automatic range clamping and error prevention
+- **Save Location Preview:** Shows exactly where files will be saved
+
+### Editor Sections
+
+1. **UI Configuration** - Core setup options
+2. **Mobile Support** - Touch input configuration (only visible when enabled)
+3. **Serialization** - File saving options (only visible when enabled)
+4. **Auto-Save Configuration** - Performance and timing settings
+5. **Tooltip System** - Hover behavior configuration
+
+The custom editor automatically appears when you select any DebugUI component in the inspector - no additional setup required!
 
 ## 📖 Detailed Usage
 
@@ -277,7 +355,7 @@ The system intelligently chooses save locations:
 **Fallback (All Platforms):**
 - Uses `Application.persistentDataPath` if accessible location fails
 
-#### Configuration Options
+#### Serialization Configuration
 
 ```csharp
 [Header("Serialization")]
@@ -447,6 +525,17 @@ public class PlayerDebugUI : DebugUI
 | `showToggleButton` | bool | Show on-screen toggle button |
 | `toggleButtonText` | string | Text displayed on the toggle button |
 
+### Auto-Save Configuration
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `autoSaveMode` | AutoSaveMode | Immediate, Debounced, Interval, or Manual |
+| `autoSaveDelay` | float | Delay after last change before saving (Debounced mode) |
+| `autoSaveInterval` | float | Maximum time between saves (Interval mode) |
+| `saveOnApplicationPause` | bool | Save when app is paused (mobile) |
+| `saveOnApplicationFocus` | bool | Save when app loses focus |
+| `saveOnDestroy` | bool | Save when component is destroyed |
+
 ### Serialization Configuration
 
 | Property | Type | Description |
@@ -522,12 +611,20 @@ public enum CustomControlType
 - Check that `tooltip` property is set on controls
 - Verify tooltip delay settings
 
-### Performance Considerations
+**Save files not found**
+- Check the console for the actual save location path
+- On desktop builds, look next to the executable
+- Enable "Open Folder" button to navigate directly to save location
 
-- Info displays update every frame - keep string operations lightweight
-- Large numbers of controls may impact performance - consider splitting into multiple tabs
-- Auto-save triggers on every value change - avoid rapid updates if possible
-- Mobile input checking runs every frame when enabled - disable if not needed
+**Performance issues during debugging**
+- Switch to `AutoSaveMode.Debounced` or `AutoSaveMode.Manual`
+- Reduce `autoSaveDelay` if saves feel too slow
+- Consider using PlayerPrefs instead of files for better performance
+
+**Custom editor not showing**
+- Ensure the Editor scripts are in an `Editor` folder
+- Check that the `DebugUI.Editor.asmdef` is properly configured
+- Restart Unity if the editor doesn't appear immediately
 
 ## 🔄 Updating the Package
 

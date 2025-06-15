@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using static RuntimeDebugUI.DebugUI;
 
 namespace RuntimeDebugUI.Editor
 {
@@ -27,6 +28,14 @@ namespace RuntimeDebugUI.Editor
         private SerializedProperty customSaveFolder;
         private SerializedProperty jsonDecimalPlaces;
 
+        // Auto-Save Configuration
+        private SerializedProperty autoSaveMode;
+        private SerializedProperty autoSaveDelay;
+        private SerializedProperty autoSaveInterval;
+        private SerializedProperty saveOnApplicationPause;
+        private SerializedProperty saveOnApplicationFocus;
+        private SerializedProperty saveOnDestroy;
+
         // Tooltip System
         private SerializedProperty tooltipDelay;
         private SerializedProperty tooltipOffset;
@@ -35,7 +44,9 @@ namespace RuntimeDebugUI.Editor
         private bool showUIConfiguration = true;
         private bool showMobileSupport = true;
         private bool showSerialization = true;
+        private bool showAutoSave = true;
         private bool showTooltipSystem = true;
+
 
         private void OnEnable()
         {
@@ -60,6 +71,14 @@ namespace RuntimeDebugUI.Editor
             preferAccessibleLocation = serializedObject.FindProperty("preferAccessibleLocation");
             customSaveFolder = serializedObject.FindProperty("customSaveFolder");
             jsonDecimalPlaces = serializedObject.FindProperty("jsonDecimalPlaces");
+
+            // Auto-Save Configuration
+            autoSaveMode = serializedObject.FindProperty("autoSaveMode");
+            autoSaveDelay = serializedObject.FindProperty("autoSaveDelay");
+            autoSaveInterval = serializedObject.FindProperty("autoSaveInterval");
+            saveOnApplicationPause = serializedObject.FindProperty("saveOnApplicationPause");
+            saveOnApplicationFocus = serializedObject.FindProperty("saveOnApplicationFocus");
+            saveOnDestroy = serializedObject.FindProperty("saveOnDestroy");
 
             // Tooltip System
             tooltipDelay = serializedObject.FindProperty("tooltipDelay");
@@ -200,6 +219,60 @@ namespace RuntimeDebugUI.Editor
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
 
+            // Auto-Save Configuration Section
+            showAutoSave = EditorGUILayout.BeginFoldoutHeaderGroup(showAutoSave, "Auto-Save Configuration");
+            if (showAutoSave)
+            {
+                if (enableSerialization.boolValue)
+                {
+                    EditorGUILayout.Space(5);
+                    EditorGUILayout.PropertyField(autoSaveMode, new GUIContent("Auto-Save Mode", "How and when to automatically save changes"));
+
+                    AutoSaveMode saveMode = (AutoSaveMode)autoSaveMode.enumValueIndex;
+
+                    EditorGUI.indentLevel++;
+                    switch (saveMode)
+                    {
+                        case AutoSaveMode.Immediate:
+                            EditorGUILayout.HelpBox("Saves immediately on every value change. May cause performance issues with frequent changes.", MessageType.Warning);
+                            break;
+
+                        case AutoSaveMode.Debounced:
+                            EditorGUILayout.PropertyField(autoSaveDelay, new GUIContent("Save Delay", "Seconds to wait after last change before saving"));
+                            if (autoSaveDelay.floatValue < 0.1f) autoSaveDelay.floatValue = 0.1f;
+                            if (autoSaveDelay.floatValue > 30f) autoSaveDelay.floatValue = 30f;
+                            EditorGUILayout.HelpBox($"Will save {autoSaveDelay.floatValue:F1} seconds after you stop changing values. Recommended for most use cases.", MessageType.Info);
+                            break;
+
+                        case AutoSaveMode.Interval:
+                            EditorGUILayout.PropertyField(autoSaveInterval, new GUIContent("Save Interval", "Maximum seconds between automatic saves"));
+                            if (autoSaveInterval.floatValue < 5f) autoSaveInterval.floatValue = 5f;
+                            if (autoSaveInterval.floatValue > 300f) autoSaveInterval.floatValue = 300f;
+                            EditorGUILayout.HelpBox($"Will save every {autoSaveInterval.floatValue:F0} seconds if there are unsaved changes.", MessageType.Info);
+                            break;
+
+                        case AutoSaveMode.Manual:
+                            EditorGUILayout.HelpBox("Only saves on app events (pause, focus loss, destroy) or manual save button. Use for maximum control.", MessageType.Info);
+                            break;
+                    }
+                    EditorGUI.indentLevel--;
+
+                    EditorGUILayout.Space(5);
+                    EditorGUILayout.LabelField("App Event Saving", EditorStyles.boldLabel);
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(saveOnApplicationPause, new GUIContent("Save on App Pause", "Save when app is paused (mobile)"));
+                    EditorGUILayout.PropertyField(saveOnApplicationFocus, new GUIContent("Save on Focus Loss", "Save when app loses focus"));
+                    EditorGUILayout.PropertyField(saveOnDestroy, new GUIContent("Save on Destroy", "Save when component is destroyed"));
+                    EditorGUI.indentLevel--;
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox("Auto-save configuration requires serialization to be enabled.", MessageType.None);
+                }
+                EditorGUILayout.Space(5);
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
             // Tooltip System Section
             showTooltipSystem = EditorGUILayout.BeginFoldoutHeaderGroup(showTooltipSystem, "Tooltip System");
             if (showTooltipSystem)
@@ -219,7 +292,7 @@ namespace RuntimeDebugUI.Editor
 
             // Footer info
             EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("Runtime Debug UI v1.2.0", EditorStyles.centeredGreyMiniLabel);
+            EditorGUILayout.LabelField("Runtime Debug UI v1.3.0", EditorStyles.centeredGreyMiniLabel);
             EditorGUILayout.LabelField("Created by Hisham Ata", EditorStyles.centeredGreyMiniLabel);
             EditorGUILayout.LabelField("Configure tabs and controls in ConfigureTabs() method", EditorStyles.centeredGreyMiniLabel);
 

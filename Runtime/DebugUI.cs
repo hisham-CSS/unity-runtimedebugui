@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 
 namespace RuntimeDebugUI
 {
+    #region Helper Classes
     /// <summary>
     /// Configuration classes for the debug UI system
     /// </summary>
@@ -46,7 +47,6 @@ namespace RuntimeDebugUI
         // Info display properties
         public Func<string> stringGetter;
     }
-
     [Serializable]
     public class DebugTabConfig
     {
@@ -54,7 +54,6 @@ namespace RuntimeDebugUI
         public string displayName;
         public List<DebugControlConfig> controls = new List<DebugControlConfig>();
     }
-
     /// <summary>
     /// Serializable data structure for saving debug values
     /// </summary>
@@ -63,7 +62,6 @@ namespace RuntimeDebugUI
     {
         public List<SavedValue> savedValues = new List<SavedValue>();
     }
-
     [Serializable]
     public class SavedValue
     {
@@ -72,15 +70,32 @@ namespace RuntimeDebugUI
         public bool boolValue;
         public DebugControlConfig.ControlType type;
     }
+    #endregion
 
     /// <summary>
     /// Generic debug UI system for tweaking any values at runtime.
     /// Uses a data-driven approach for easy configuration of tabs and controls.
     /// Perfect for debugging game mechanics, tweaking parameters, and monitoring values.
-    /// Now includes smart file location selection with cross-platform fallback!
     /// </summary>
     public class DebugUI : MonoBehaviour
     {
+        #region Enums
+        public enum AutoSaveMode
+        {
+            Immediate,      // Save immediately on every change (original behavior)
+            Debounced,      // Save after delay when user stops changing values
+            Interval,       // Save at regular intervals only
+            Manual          // Only save manually or on app events
+        }
+        public enum MobileTriggerType
+        {
+            TouchGesture,    // Multi-touch (e.g., 3 finger tap)
+            TouchAndHold,    // Touch and hold for X seconds
+            OnScreenButton   // Always visible toggle button
+        }
+        #endregion
+
+        #region Inspector Configuration
         [Header("UI Configuration")]
         [SerializeField] private UIDocument uiDocument;
         [SerializeField] private KeyCode toggleKey = KeyCode.F1;
@@ -103,10 +118,20 @@ namespace RuntimeDebugUI
         [SerializeField] private string customSaveFolder = "DebugSettings"; // Custom folder name for organization
         [SerializeField] private int jsonDecimalPlaces = 3; // Number of decimal places in JSON output
 
+        [Header("Auto-Save Configuration")]
+        [SerializeField] private AutoSaveMode autoSaveMode = AutoSaveMode.Debounced;
+        [SerializeField] private float autoSaveDelay = 2f; // Delay after last change before saving
+        [SerializeField] private float autoSaveInterval = 30f; // Maximum time between saves
+        [SerializeField] private bool saveOnApplicationPause = true;
+        [SerializeField] private bool saveOnApplicationFocus = true;
+        [SerializeField] private bool saveOnDestroy = true;
+
         [Header("Tooltip System")]
         [SerializeField] private float tooltipDelay = 0.5f; // Delay before showing tooltip
-        [SerializeField] private Vector2 tooltipOffset = new Vector2(10, -10); // Offset from mouse position
+        [SerializeField] private Vector2 tooltipOffset = new Vector2(10, -10); // Offset from mouse position 
+        #endregion
 
+        #region Private Fields
         // Private fields
         private VisualElement root;
         private VisualElement debugPanel;
@@ -114,6 +139,19 @@ namespace RuntimeDebugUI
         private string saveFilePath;
         private string actualSaveLocation; // Where the file was actually saved
         private bool usingFallbackLocation = false;
+
+        // Auto-save system fields
+        private bool hasUnsavedChanges = false;
+        private float lastChangeTime = 0f;
+        private float lastSaveTime = 0f;
+
+        // Save status indicator fields
+        private Label saveStatusIndicator;
+        private Coroutine saveStatusCoroutine;
+
+        // Class field to store save button reference
+        private Button saveButton;
+        private Coroutine saveButtonResetCoroutine;
 
         // Mobile support fields
         private float[] touchStartTimes;
@@ -145,13 +183,7 @@ namespace RuntimeDebugUI
         private string currentTooltipText;
         private float tooltipTimer;
         private bool tooltipVisible = false;
-
-        public enum MobileTriggerType
-        {
-            TouchGesture,    // Multi-touch (e.g., 3 finger tap)
-            TouchAndHold,    // Touch and hold for X seconds
-            OnScreenButton   // Always visible toggle button
-        }
+        #endregion
 
         protected virtual void Start()
         {
@@ -179,7 +211,6 @@ namespace RuntimeDebugUI
             isVisible = showOnStart;
             debugPanel.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
         }
-
         private void Awake()
         {
             // Validate UIDocument reference
@@ -198,7 +229,6 @@ namespace RuntimeDebugUI
                 return;
             }
         }
-
         private void Update()
         {
             // Toggle UI visibility with key press
@@ -219,12 +249,17 @@ namespace RuntimeDebugUI
                 UpdateInfoDisplays();
                 UpdateTooltipSystem();
             }
-        }
 
+            // Handle auto-save logic
+            if (enableSerialization && hasUnsavedChanges)
+            {
+                HandleAutoSave();
+            }
+        }
         private void OnDestroy()
         {
             // Auto-save when the component is destroyed
-            if (enableSerialization)
+            if (enableSerialization && saveOnDestroy && hasUnsavedChanges)
             {
                 SaveValues();
             }
@@ -233,7 +268,7 @@ namespace RuntimeDebugUI
         private void OnApplicationPause(bool pauseStatus)
         {
             // Auto-save when the application is paused (mobile)
-            if (!pauseStatus && enableSerialization)
+            if (!pauseStatus && enableSerialization && saveOnApplicationPause && hasUnsavedChanges)
             {
                 SaveValues();
             }
@@ -242,7 +277,7 @@ namespace RuntimeDebugUI
         private void OnApplicationFocus(bool hasFocus)
         {
             // Save when app loses focus
-            if (!hasFocus && enableSerialization)
+            if (!hasFocus && enableSerialization && saveOnApplicationFocus && hasUnsavedChanges)
             {
                 SaveValues();
             }
@@ -428,7 +463,7 @@ namespace RuntimeDebugUI
         {
             try
             {
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
                 // In editor: Save relative to project folder
                 string projectPath = Directory.GetParent(Application.dataPath).FullName;
                 string editorSavePath = Path.Combine(projectPath, customSaveFolder, saveFileName);
@@ -438,7 +473,7 @@ namespace RuntimeDebugUI
                 {
                     return editorSavePath;
                 }
-    #else
+#else
                 // In build: Try to save relative to executable
                 if (Application.platform == RuntimePlatform.WindowsPlayer)
                 {
@@ -475,7 +510,7 @@ namespace RuntimeDebugUI
                         return linuxSavePath;
                     }
                 }
-    #endif
+#endif
             }
             catch (Exception e)
             {
@@ -519,7 +554,6 @@ namespace RuntimeDebugUI
         #endregion
 
         #region Serialization
-
         /// <summary>
         /// Get the save key for a control (uses custom key if provided, otherwise generates one)
         /// </summary>
@@ -527,13 +561,24 @@ namespace RuntimeDebugUI
         {
             return !string.IsNullOrEmpty(control.saveKey) ? control.saveKey : $"{tabConfig.name}.{control.name}";
         }
-
         /// <summary>
-        /// Save all serializable control values
+        /// Force save immediately regardless of auto-save settings
+        /// </summary>
+        public void ForceSave()
+        {
+            if (enableSerialization)
+            {
+                SaveValues();
+                Debug.Log("DebugUI: Manual save completed");
+            }
+        }
+        /// <summary>
+        /// Save all serializable control values with improved auto-save logic
         /// </summary>
         public void SaveValues()
         {
             if (!enableSerialization) return;
+            ShowSavingIndicator();
 
             debugData.savedValues.Clear();
 
@@ -577,8 +622,14 @@ namespace RuntimeDebugUI
             {
                 SaveToFile();
             }
-        }
 
+            lastSaveTime = Time.time;
+            hasUnsavedChanges = false;
+
+            // Update save button appearance
+            UpdateSaveButtonAppearance();
+            ShowSavedIndicator();
+        }
         /// <summary>
         /// Load all serializable control values
         /// </summary>
@@ -624,7 +675,6 @@ namespace RuntimeDebugUI
                 }
             }
         }
-
         private void SaveToFile()
         {
             try
@@ -762,7 +812,6 @@ namespace RuntimeDebugUI
                 debugData = new DebugUIData();
             }
         }
-
         /// <summary>
         /// Clear all saved settings
         /// </summary>
@@ -800,24 +849,278 @@ namespace RuntimeDebugUI
             {
                 string folderPath = Path.GetDirectoryName(saveFilePath);
 
-    #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
                 System.Diagnostics.Process.Start("explorer.exe", folderPath.Replace('/', '\\'));
-    #elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+#elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
                 System.Diagnostics.Process.Start("open", folderPath);
-    #elif UNITY_EDITOR_LINUX || UNITY_STANDALONE_LINUX
+#elif UNITY_EDITOR_LINUX || UNITY_STANDALONE_LINUX
                 System.Diagnostics.Process.Start("xdg-open", folderPath);
-    #else
+#else
                 Debug.Log($"DebugUI: Save folder: {folderPath}");
-    #endif
+#endif
             }
             catch (Exception e)
             {
                 Debug.LogError($"DebugUI: Failed to open save folder - {e.Message}");
             }
         }
+        private void HandleAutoSave()
+        {
+            float timeSinceLastChange = Time.time - lastChangeTime;
+            float timeSinceLastSave = Time.time - lastSaveTime;
+
+            switch (autoSaveMode)
+            {
+                case AutoSaveMode.Immediate:
+                    // Original behavior - save immediately
+                    SaveValues();
+                    hasUnsavedChanges = false;
+                    break;
+
+                case AutoSaveMode.Debounced:
+                    // Save after delay when user stops changing values
+                    if (timeSinceLastChange >= autoSaveDelay)
+                    {
+                        SaveValues();
+                        hasUnsavedChanges = false;
+                    }
+                    break;
+
+                case AutoSaveMode.Interval:
+                    // Save at regular intervals
+                    if (timeSinceLastSave >= autoSaveInterval)
+                    {
+                        SaveValues();
+                        hasUnsavedChanges = false;
+                    }
+                    break;
+
+                case AutoSaveMode.Manual:
+                    // Only save on app events or manual save
+                    break;
+            }
+        }
+        private void MarkAsChanged()
+        {
+            hasUnsavedChanges = true;
+            lastChangeTime = Time.time;
+
+            // Update save button appearance
+            UpdateSaveButtonAppearance();
+            UpdateSaveStatusIndicator();
+        }
+        private void AddSerializationButtons()
+        {
+            var footer = root.Q<VisualElement>("Footer");
+            if (footer == null) return;
+
+            // Create manual save button
+            saveButton = new Button();
+            saveButton.name = "save-button";
+            saveButton.AddToClassList("footer-button");
+            UpdateSaveButtonAppearance(); // Set initial appearance
+
+            // Set up click handler
+            saveButton.clicked += OnSaveButtonClicked;
+            footer.Insert(0, saveButton);
+
+            // Clear button
+            var clearButton = new Button(() => {
+                ClearSavedSettings();
+                // Optionally reload to show cleared state
+                LoadValues();
+                UpdateSaveButtonAppearance(); // Update button after clearing
+            })
+            {
+                text = "Clear Saved"
+            };
+            clearButton.AddToClassList("footer-button");
+            footer.Insert(1, clearButton);
+
+            // Open folder button (desktop only)
+            if (!saveToPlayerPrefs && (Application.platform == RuntimePlatform.WindowsPlayer ||
+                                       Application.platform == RuntimePlatform.OSXPlayer ||
+                                       Application.platform == RuntimePlatform.LinuxPlayer ||
+                                       Application.isEditor))
+            {
+                var openFolderButton = new Button(() => OpenSaveFolder())
+                {
+                    text = "Open Folder"
+                };
+                openFolderButton.AddToClassList("footer-button");
+                footer.Insert(2, openFolderButton);
+            }
+        }
+        private void OnSaveButtonClicked()
+        {
+            ForceSave();
+
+            // Visual feedback
+            saveButton.text = "Saved!";
+            saveButton.SetEnabled(false);
+            saveButton.RemoveFromClassList("unsaved-changes");
+            saveButton.AddToClassList("save-feedback");
+
+            // Reset button after delay
+            if (saveButtonResetCoroutine != null)
+            {
+                StopCoroutine(saveButtonResetCoroutine);
+            }
+            saveButtonResetCoroutine = StartCoroutine(ResetSaveButtonCoroutine());
+        }
+        private System.Collections.IEnumerator ResetSaveButtonCoroutine()
+        {
+            yield return new WaitForSeconds(1.5f);
+
+            if (saveButton != null)
+            {
+                saveButton.SetEnabled(true);
+                saveButton.RemoveFromClassList("save-feedback");
+                UpdateSaveButtonAppearance();
+            }
+
+            saveButtonResetCoroutine = null;
+        }
+
+        private void UpdateSaveButtonAppearance()
+        {
+            if (saveButton == null) return;
+
+            if (hasUnsavedChanges)
+            {
+                saveButton.text = "Save Settings *";
+                saveButton.AddToClassList("unsaved-changes");
+                saveButton.RemoveFromClassList("save-feedback");
+            }
+            else
+            {
+                saveButton.text = "Save Settings";
+                saveButton.RemoveFromClassList("unsaved-changes");
+                saveButton.RemoveFromClassList("save-feedback");
+            }
+        }
+        // Add this method to create the save status indicator
+        private void SetupSaveStatusIndicator()
+        {
+            // Create save status indicator
+            saveStatusIndicator = new Label();
+            saveStatusIndicator.name = "save-status-indicator";
+            saveStatusIndicator.AddToClassList("save-status");
+            saveStatusIndicator.text = "Unsaved Changes";
+
+            // Add to root
+            var footer = root.Q<VisualElement>("Footer");
+            footer.Add(saveStatusIndicator);
+
+            // Set initial visibility based on current state
+            if (hasUnsavedChanges)
+            {
+                saveStatusIndicator.AddToClassList("visible");
+                saveStatusIndicator.AddToClassList("unsaved");
+            }
+        }
+
+        // Add this method to update the indicator state
+        private void UpdateSaveStatusIndicator()
+        {
+            if (saveStatusIndicator == null) return;
+
+            if (hasUnsavedChanges)
+            {
+                saveStatusIndicator.text = "Unsaved Changes";
+                saveStatusIndicator.RemoveFromClassList("saved");
+                saveStatusIndicator.RemoveFromClassList("saving");
+                saveStatusIndicator.AddToClassList("unsaved");
+                saveStatusIndicator.AddToClassList("visible");
+            }
+            else
+            {
+                saveStatusIndicator.RemoveFromClassList("visible");
+                saveStatusIndicator.RemoveFromClassList("unsaved");
+                saveStatusIndicator.RemoveFromClassList("saving");
+            }
+        }
+        // Add this method to show saving state
+        private void ShowSavingIndicator()
+        {
+            if (saveStatusIndicator == null) return;
+
+            saveStatusIndicator.text = "Saving...";
+            saveStatusIndicator.RemoveFromClassList("unsaved");
+            saveStatusIndicator.RemoveFromClassList("saved");
+            saveStatusIndicator.AddToClassList("saving");
+            saveStatusIndicator.AddToClassList("visible");
+        }
+
+        // Add this method to show saved confirmation
+        private void ShowSavedIndicator()
+        {
+            if (saveStatusIndicator == null) return;
+
+            saveStatusIndicator.text = "Saved";
+            saveStatusIndicator.RemoveFromClassList("unsaved");
+            saveStatusIndicator.RemoveFromClassList("saving");
+            saveStatusIndicator.AddToClassList("saved");
+            saveStatusIndicator.AddToClassList("visible");
+
+            // Hide after 2 seconds
+            if (saveStatusCoroutine != null)
+            {
+                StopCoroutine(saveStatusCoroutine);
+            }
+            saveStatusCoroutine = StartCoroutine(HideSaveStatusAfterDelay());
+        }
+
+        // Add this coroutine to hide the indicator after showing "Saved"
+        private System.Collections.IEnumerator HideSaveStatusAfterDelay()
+        {
+            yield return new WaitForSeconds(2f);
+
+            if (saveStatusIndicator != null)
+            {
+                saveStatusIndicator.RemoveFromClassList("visible");
+                saveStatusIndicator.RemoveFromClassList("saved");
+            }
+
+            saveStatusCoroutine = null;
+        }
 
         #endregion
 
+        #region UI Initialization and Event Handling
+        private void InitializeUI()
+        {
+            // Get UI containers
+            debugPanel = root.Q<VisualElement>("DebugPanel");
+            tabButtonsContainer = root.Q<VisualElement>("TabButtons");
+            tabContentContainer = root.Q<VisualElement>("TabContentContainer");
+
+            if (tabButtonsContainer == null || tabContentContainer == null)
+            {
+                Debug.LogError("DebugUI: Required UI containers not found.");
+                return;
+            }
+
+            // Set panel title
+            var headerText = root.Q<Label>(className: "header-text");
+            if (headerText != null)
+            {
+                headerText.text = panelTitle;
+            }
+
+            // Create tabs and buttons
+            foreach (var tabConfig in tabConfigs)
+            {
+                CreateTab(tabConfig);
+            }
+
+            // Show first tab by default
+            if (tabConfigs.Count > 0)
+            {
+                ShowTab(tabConfigs[0].name);
+            }
+            SetupSaveStatusIndicator();
+        }
         /// <summary>
         /// Override this method to configure your tabs and controls.
         /// This is where you define what appears in your debug UI.
@@ -863,10 +1166,269 @@ namespace RuntimeDebugUI
 
             tabConfigs.Add(exampleTab);
         }
+        private void CreateTab(DebugTabConfig tabConfig)
+        {
+            // Create tab button
+            var tabButton = new Button(() => ShowTab(tabConfig.name))
+            {
+                text = tabConfig.displayName
+            };
+            tabButton.AddToClassList("tab-button");
+            tabButtonsContainer.Add(tabButton);
+            tabButtons[tabConfig.name] = tabButton;
+
+            // Create tab content container
+            var tabContent = new VisualElement();
+            tabContent.AddToClassList("tab-content");
+            tabContent.style.display = DisplayStyle.None;
+
+            // Create scroll view for tab content
+            var scrollView = new ScrollView();
+            scrollView.AddToClassList("tab-content-scroll");
+
+            // Group controls by section
+            string currentSection = null;
+            foreach (var control in tabConfig.controls)
+            {
+                // Add section header if this control belongs to a new section
+                if (!string.IsNullOrEmpty(control.sectionName) && control.sectionName != currentSection)
+                {
+                    var sectionHeader = new Label(control.sectionName);
+                    sectionHeader.AddToClassList("section-header");
+                    scrollView.Add(sectionHeader);
+                    currentSection = control.sectionName;
+                }
+
+                // Create control based on type
+                switch (control.type)
+                {
+                    case DebugControlConfig.ControlType.Slider:
+                        CreateSliderControl(scrollView, control);
+                        break;
+                    case DebugControlConfig.ControlType.Toggle:
+                        CreateToggleControl(scrollView, control);
+                        break;
+                    case DebugControlConfig.ControlType.InfoDisplay:
+                        CreateInfoControl(scrollView, control);
+                        break;
+                }
+            }
+
+            tabContent.Add(scrollView);
+            tabContentContainer.Add(tabContent);
+            tabElements[tabConfig.name] = tabContent;
+        }
+        private void ShowTab(string tabName)
+        {
+            // Hide all tabs
+            foreach (var tab in tabElements.Values)
+            {
+                tab.style.display = DisplayStyle.None;
+            }
+
+            // Remove active class from all buttons
+            foreach (var button in tabButtons.Values)
+            {
+                button.RemoveFromClassList("tab-button-active");
+            }
+
+            // Show selected tab
+            if (tabElements.TryGetValue(tabName, out var selectedTab))
+            {
+                selectedTab.style.display = DisplayStyle.Flex;
+                currentActiveTab = tabName;
+            }
+
+            // Add active class to selected button
+            if (tabButtons.TryGetValue(tabName, out var selectedButton))
+            {
+                selectedButton.AddToClassList("tab-button-active");
+            }
+        }
         protected void AddTab(DebugTabConfig tabConfig)
         {
             tabConfigs.Add(tabConfig);
         }
+        private void CreateSliderControl(VisualElement parent, DebugControlConfig config)
+        {
+            var container = new VisualElement();
+            container.AddToClassList("slider-container");
+
+            var label = new Label(config.displayName);
+
+            // Build tooltip text
+            string tooltipText = config.tooltip;
+            if (config.saveValue && enableSerialization)
+            {
+                label.text += " *";
+                if (!string.IsNullOrEmpty(tooltipText))
+                {
+                    tooltipText += " (Auto-saved)";
+                }
+                else
+                {
+                    tooltipText = "Auto-saved";
+                }
+            }
+
+            // Register tooltip for runtime
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                RegisterTooltip(label, tooltipText);
+            }
+
+            container.Add(label);
+
+            var sliderContainer = new VisualElement();
+            sliderContainer.AddToClassList("slider-with-value");
+
+            var slider = new Slider(config.minValue, config.maxValue);
+            slider.AddToClassList("slider");
+            slider.name = config.name;
+            slider.value = config.getter != null ? config.getter() : config.defaultValue;
+
+            var valueField = new FloatField();
+            valueField.name = config.name + "Field";
+            valueField.value = slider.value;
+            valueField.AddToClassList("value-field");
+
+            slider.RegisterValueChangedCallback(evt => {
+                valueField.SetValueWithoutNotify(evt.newValue);
+                config.setter?.Invoke(evt.newValue);
+
+                // Mark as changed instead of immediate save
+                if (enableSerialization && config.saveValue)
+                {
+                    MarkAsChanged();
+                }
+            });
+
+            valueField.RegisterValueChangedCallback(evt => {
+                float clampedValue = Mathf.Clamp(evt.newValue, config.minValue, config.maxValue);
+                valueField.SetValueWithoutNotify(clampedValue);
+                slider.SetValueWithoutNotify(clampedValue);
+                config.setter?.Invoke(clampedValue);
+
+                // Mark as changed instead of immediate save
+                if (enableSerialization && config.saveValue)
+                {
+                    MarkAsChanged();
+                }
+            });
+
+            sliderContainer.Add(slider);
+            sliderContainer.Add(valueField);
+            container.Add(sliderContainer);
+            parent.Add(container);
+        }
+
+        private void CreateToggleControl(VisualElement parent, DebugControlConfig config)
+        {
+            var container = new VisualElement();
+            container.AddToClassList("toggle-container");
+
+            var toggle = new Toggle(config.displayName);
+            toggle.name = config.name;
+            toggle.value = config.boolGetter != null ? config.boolGetter() : config.defaultBoolValue;
+
+            // Build tooltip text
+            string tooltipText = config.tooltip;
+            if (config.saveValue && enableSerialization)
+            {
+                toggle.text += " *";
+                if (!string.IsNullOrEmpty(tooltipText))
+                {
+                    tooltipText += " (Auto-saved)";
+                }
+                else
+                {
+                    tooltipText = "Auto-saved";
+                }
+            }
+
+            // Register tooltip for runtime
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                RegisterTooltip(toggle, tooltipText);
+            }
+
+            toggle.RegisterValueChangedCallback(evt => {
+                config.boolSetter?.Invoke(evt.newValue);
+
+                // Mark as changed instead of immediate save
+                if (enableSerialization && config.saveValue)
+                {
+                    MarkAsChanged();
+                }
+            });
+
+            container.Add(toggle);
+            parent.Add(container);
+        }
+        private void CreateInfoControl(VisualElement parent, DebugControlConfig config)
+        {
+            var container = new VisualElement();
+            container.AddToClassList("info-container");
+
+            var label = new Label(config.displayName);
+            label.AddToClassList("info-label");
+
+            var valueLabel = new Label();
+            valueLabel.AddToClassList("info-value");
+            valueLabel.name = config.name + "Value";
+
+            // Register tooltip for runtime
+            if (!string.IsNullOrEmpty(config.tooltip))
+            {
+                RegisterTooltip(container, config.tooltip);
+            }
+
+            container.Add(label);
+            container.Add(valueLabel);
+            parent.Add(container);
+        }
+        private void UpdateInfoDisplays()
+        {
+            foreach (var tabConfig in tabConfigs)
+            {
+                foreach (var control in tabConfig.controls)
+                {
+                    if (control.type == DebugControlConfig.ControlType.InfoDisplay)
+                    {
+                        var valueLabel = root.Q<Label>(control.name + "Value");
+                        if (valueLabel != null && control.stringGetter != null)
+                        {
+                            valueLabel.text = control.stringGetter();
+                        }
+                    }
+                }
+            }
+        }
+        private void SetupEventHandlers()
+        {
+            // Close button
+            var closeButton = root.Q<Button>("CloseButton");
+            if (closeButton != null)
+            {
+                closeButton.clicked += ToggleVisibility;
+            }
+
+            // Reset button
+            var resetButton = root.Q<Button>("ResetButton");
+            if (resetButton != null)
+            {
+                resetButton.clicked += ResetToOriginalValues;
+            }
+
+            // Add serialization buttons if enabled
+            if (enableSerialization)
+            {
+                AddSerializationButtons();
+            }
+        }
+        #endregion
+
+        #region Mobile Support
         private void SetupMobileSupport()
         {
             if (!enableMobileSupport) return;
@@ -969,6 +1531,9 @@ namespace RuntimeDebugUI
                 isTouchHolding = false;
             }
         }
+        #endregion
+
+        #region Helper Methods
         private void StoreOriginalValues()
         {
             originalValues.Clear();
@@ -1000,334 +1565,6 @@ namespace RuntimeDebugUI
 
             Debug.Log($"DebugUI: Stored {originalValues.Count} original float values and {originalBoolValues.Count} original bool values");
         }
-        private void InitializeUI()
-        {
-            // Get UI containers
-            debugPanel = root.Q<VisualElement>("DebugPanel");
-            tabButtonsContainer = root.Q<VisualElement>("TabButtons");
-            tabContentContainer = root.Q<VisualElement>("TabContentContainer");
-
-            if (tabButtonsContainer == null || tabContentContainer == null)
-            {
-                Debug.LogError("DebugUI: Required UI containers not found.");
-                return;
-            }
-
-            // Set panel title
-            var headerText = root.Q<Label>(className: "header-text");
-            if (headerText != null)
-            {
-                headerText.text = panelTitle;
-            }
-
-            // Create tabs and buttons
-            foreach (var tabConfig in tabConfigs)
-            {
-                CreateTab(tabConfig);
-            }
-
-            // Show first tab by default
-            if (tabConfigs.Count > 0)
-            {
-                ShowTab(tabConfigs[0].name);
-            }
-        }
-        private void CreateTab(DebugTabConfig tabConfig)
-        {
-            // Create tab button
-            var tabButton = new Button(() => ShowTab(tabConfig.name))
-            {
-                text = tabConfig.displayName
-            };
-            tabButton.AddToClassList("tab-button");
-            tabButtonsContainer.Add(tabButton);
-            tabButtons[tabConfig.name] = tabButton;
-
-            // Create tab content container
-            var tabContent = new VisualElement();
-            tabContent.AddToClassList("tab-content");
-            tabContent.style.display = DisplayStyle.None;
-
-            // Create scroll view for tab content
-            var scrollView = new ScrollView();
-            scrollView.AddToClassList("tab-content-scroll");
-
-            // Group controls by section
-            string currentSection = null;
-            foreach (var control in tabConfig.controls)
-            {
-                // Add section header if this control belongs to a new section
-                if (!string.IsNullOrEmpty(control.sectionName) && control.sectionName != currentSection)
-                {
-                    var sectionHeader = new Label(control.sectionName);
-                    sectionHeader.AddToClassList("section-header");
-                    scrollView.Add(sectionHeader);
-                    currentSection = control.sectionName;
-                }
-
-                // Create control based on type
-                switch (control.type)
-                {
-                    case DebugControlConfig.ControlType.Slider:
-                        CreateSliderControl(scrollView, control);
-                        break;
-                    case DebugControlConfig.ControlType.Toggle:
-                        CreateToggleControl(scrollView, control);
-                        break;
-                    case DebugControlConfig.ControlType.InfoDisplay:
-                        CreateInfoControl(scrollView, control);
-                        break;
-                }
-            }
-
-            tabContent.Add(scrollView);
-            tabContentContainer.Add(tabContent);
-            tabElements[tabConfig.name] = tabContent;
-        }
-        private void CreateSliderControl(VisualElement parent, DebugControlConfig config)
-        {
-            var container = new VisualElement();
-            container.AddToClassList("slider-container");
-
-            var label = new Label(config.displayName);
-
-            // Build tooltip text
-            string tooltipText = config.tooltip;
-            if (config.saveValue && enableSerialization)
-            {
-                label.text += " *";
-                if (!string.IsNullOrEmpty(tooltipText))
-                {
-                    tooltipText += " (Auto-saved)";
-                }
-                else
-                {
-                    tooltipText = "Auto-saved";
-                }
-            }
-
-            container.Add(label);
-
-            var sliderContainer = new VisualElement();
-            sliderContainer.AddToClassList("slider-with-value");
-
-            var slider = new Slider(config.minValue, config.maxValue);
-            slider.AddToClassList("slider");
-            slider.name = config.name;
-            slider.value = config.getter != null ? config.getter() : config.defaultValue;
-
-            var valueField = new FloatField();
-            valueField.AddToClassList("value-field");
-            valueField.name = config.name + "Field";
-            valueField.value = slider.value;
-
-            // Register tooltips for runtime
-            if (!string.IsNullOrEmpty(tooltipText))
-            {
-                RegisterTooltip(label, tooltipText);
-                RegisterTooltip(slider, tooltipText);
-                RegisterTooltip(valueField, tooltipText);
-            }
-
-            // Set up two-way binding
-            slider.RegisterValueChangedCallback(evt => {
-                valueField.value = evt.newValue;
-                config.setter?.Invoke(evt.newValue);
-
-                // Auto-save if enabled
-                if (enableSerialization && config.saveValue)
-                {
-                    SaveValues();
-                }
-            });
-
-            valueField.RegisterValueChangedCallback(evt => {
-                slider.value = evt.newValue;
-                config.setter?.Invoke(evt.newValue);
-
-                // Auto-save if enabled
-                if (enableSerialization && config.saveValue)
-                {
-                    SaveValues();
-                }
-            });
-
-            sliderContainer.Add(slider);
-            sliderContainer.Add(valueField);
-            container.Add(sliderContainer);
-            parent.Add(container);
-        }
-        private void CreateToggleControl(VisualElement parent, DebugControlConfig config)
-        {
-            var container = new VisualElement();
-            container.AddToClassList("toggle-container");
-
-            var toggle = new Toggle(config.displayName);
-            toggle.name = config.name;
-            toggle.value = config.boolGetter != null ? config.boolGetter() : config.defaultBoolValue;
-
-            // Build tooltip text
-            string tooltipText = config.tooltip;
-            if (config.saveValue && enableSerialization)
-            {
-                toggle.text += " *";
-                if (!string.IsNullOrEmpty(tooltipText))
-                {
-                    tooltipText += " (Auto-saved)";
-                }
-                else
-                {
-                    tooltipText = "Auto-saved";
-                }
-            }
-
-            // Register tooltip for runtime
-            if (!string.IsNullOrEmpty(tooltipText))
-            {
-                RegisterTooltip(toggle, tooltipText);
-            }
-
-            toggle.RegisterValueChangedCallback(evt => {
-                config.boolSetter?.Invoke(evt.newValue);
-
-                // Auto-save if enabled
-                if (enableSerialization && config.saveValue)
-                {
-                    SaveValues();
-                }
-            });
-
-            container.Add(toggle);
-            parent.Add(container);
-        }
-        private void CreateInfoControl(VisualElement parent, DebugControlConfig config)
-        {
-            var container = new VisualElement();
-            container.AddToClassList("info-container");
-
-            var label = new Label(config.displayName);
-            label.AddToClassList("info-label");
-
-            var valueLabel = new Label();
-            valueLabel.AddToClassList("info-value");
-            valueLabel.name = config.name + "Value";
-
-            // Register tooltip for runtime
-            if (!string.IsNullOrEmpty(config.tooltip))
-            {
-                RegisterTooltip(container, config.tooltip);
-            }
-
-            container.Add(label);
-            container.Add(valueLabel);
-            parent.Add(container);
-        }
-        private void ShowTab(string tabName)
-        {
-            // Hide all tabs
-            foreach (var tab in tabElements.Values)
-            {
-                tab.style.display = DisplayStyle.None;
-            }
-
-            // Remove active class from all buttons
-            foreach (var button in tabButtons.Values)
-            {
-                button.RemoveFromClassList("tab-button-active");
-            }
-
-            // Show selected tab
-            if (tabElements.TryGetValue(tabName, out var selectedTab))
-            {
-                selectedTab.style.display = DisplayStyle.Flex;
-                currentActiveTab = tabName;
-            }
-
-            // Add active class to selected button
-            if (tabButtons.TryGetValue(tabName, out var selectedButton))
-            {
-                selectedButton.AddToClassList("tab-button-active");
-            }
-        }
-        private void UpdateInfoDisplays()
-        {
-            foreach (var tabConfig in tabConfigs)
-            {
-                foreach (var control in tabConfig.controls)
-                {
-                    if (control.type == DebugControlConfig.ControlType.InfoDisplay)
-                    {
-                        var valueLabel = root.Q<Label>(control.name + "Value");
-                        if (valueLabel != null && control.stringGetter != null)
-                        {
-                            valueLabel.text = control.stringGetter();
-                        }
-                    }
-                }
-            }
-        }
-        private void SetupEventHandlers()
-        {
-            // Close button
-            var closeButton = root.Q<Button>("CloseButton");
-            if (closeButton != null)
-            {
-                closeButton.clicked += ToggleVisibility;
-            }
-
-            // Reset button
-            var resetButton = root.Q<Button>("ResetButton");
-            if (resetButton != null)
-            {
-                resetButton.clicked += ResetToOriginalValues;
-            }
-
-            // Add serialization buttons if enabled
-            if (enableSerialization)
-            {
-                AddSerializationButtons();
-            }
-        }
-        private void AddSerializationButtons()
-        {
-            var footer = root.Q<VisualElement>("Footer");
-            if (footer == null) return;
-
-            // Save button
-            var saveButton = new Button(() => SaveValues())
-            {
-                text = "Save Settings"
-            };
-            saveButton.AddToClassList("footer-button");
-            footer.Insert(0, saveButton);
-
-            // Clear button
-            var clearButton = new Button(() => {
-                ClearSavedSettings();
-                // Optionally reload to show cleared state
-                LoadValues();
-            })
-            {
-                text = "Clear Saved"
-            };
-            clearButton.AddToClassList("footer-button");
-            footer.Insert(1, clearButton);
-
-            // Open folder button (desktop only)
-            if (!saveToPlayerPrefs && (Application.platform == RuntimePlatform.WindowsPlayer ||
-                                       Application.platform == RuntimePlatform.OSXPlayer ||
-                                       Application.platform == RuntimePlatform.LinuxPlayer ||
-                                       Application.isEditor))
-            {
-                var openFolderButton = new Button(() => OpenSaveFolder())
-                {
-                    text = "Open Folder"
-                };
-                openFolderButton.AddToClassList("footer-button");
-                footer.Insert(2, openFolderButton);
-            }
-        }
-
         private void ResetToOriginalValues()
         {
             Debug.Log("DebugUI: Resetting to original values...");
@@ -1385,8 +1622,6 @@ namespace RuntimeDebugUI
                 SaveValues();
             }
         }
-
-
         private void ToggleVisibility()
         {
             isVisible = !isVisible;
@@ -1404,7 +1639,6 @@ namespace RuntimeDebugUI
                 HideTooltip();
             }
         }
-
         /// <summary>
         /// Show the debug UI - these are hooks for external scripts to control visibility
         /// </summary>
@@ -1413,7 +1647,6 @@ namespace RuntimeDebugUI
             isVisible = true;
             debugPanel.style.display = DisplayStyle.Flex;
         }
-
         /// <summary>
         /// Hide the debug UI - these are hooks for external scripts to control visibility
         /// </summary>
@@ -1423,13 +1656,14 @@ namespace RuntimeDebugUI
             debugPanel.style.display = DisplayStyle.None;
             HideTooltip();
         }
-
         /// <summary>
-        /// Check if the debug UI is currently visible
+        /// Check if the debug UI is currently visible - this can be used by external scripts to determine visibility state
         /// </summary>
         public bool IsVisible => isVisible;
+        #endregion
     }
 
+    #region JSON Serialization Helpers
     /// <summary>
     /// Custom JSON converter for formatting floats with specific decimal places
     /// </summary>
@@ -1456,4 +1690,5 @@ namespace RuntimeDebugUI
             return Convert.ToSingle(reader.Value);
         }
     }
+    #endregion
 }
